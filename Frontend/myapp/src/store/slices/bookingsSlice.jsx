@@ -14,9 +14,10 @@ const bookingsSlice = createSlice({
       state.bookings = [];
     },
 
-    
     removeBooking: (state, action) => {
-      state.bookings = state.bookings
+      state.bookings = state.bookings.filter(
+        (booking) => booking.id !== action.payload
+      );
     },
   },
 });

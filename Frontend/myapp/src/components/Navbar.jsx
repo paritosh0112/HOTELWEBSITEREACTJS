@@ -5,7 +5,7 @@ import useDarkMode from "../hooks/useDarkMode";
 
 const Navbar = ({ theme, toggleTheme }) => {
   const navigate = useNavigate();
-  const { isDark } = useDarkMode();  // ✅ FIXED: HOOK USE KARA
+  const { isDark } = useDarkMode();  
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
 
   const handleLogout = () => {

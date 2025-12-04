@@ -54,9 +54,8 @@ export default function getBotResponse(question, hotels, bookings) {
           return `User Details:
       Name: ${currentUser.name}
       Email: ${currentUser.email}`;
-        } else {
-          return "No user is currently logged in.";
-        }
+        } 
+        
       }
       
     // Default reply
