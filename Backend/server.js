@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const app = express();
 const PORT = 5000;
-const url = 'mongodb+srv://paritoshpurohit29_db_user:7aY8OeOMR7CTqteS@cluster0.coeeuve.mongodb.net/';
+const url = 'mongodb://localhost:27017/hotelApp';
 const cors = require('cors');
 // MongoDB connect
 app.use(cors());
