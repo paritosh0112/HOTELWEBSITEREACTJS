@@ -4,7 +4,7 @@ import axios from 'axios';
 export const fetchHotels = createAsyncThunk(
   'hotels/fetchHotels',
   async () => {
-    const response = await axios.get('http://localhost:5000/find');
+    const response = await axios.get('https://hotel-backend-f3kg.onrender.com');
     return response.data;
   }
 );
