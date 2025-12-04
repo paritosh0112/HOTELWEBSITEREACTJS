@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Provider, useDispatch, useSelector } from "react-redux";
-import { store } from "./store/store";
-import { fetchHotels, setFilterCity, setFilterName, setFilterPrice, setSortOrder, clearFilters, selectFilteredHotels } from "./store/slices/hotelsSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchHotels } from "./store/slices/hotelsSlice";
 
 import HotelCard from "./components/HotelCard";
 import HotelDetails from "./components/HotelDetails";
@@ -14,50 +13,86 @@ import useDarkMode from "./hooks/useDarkMode";
 import MyBookings from "./components/MyBookings";
 import ChatBot from "./components/ChatBot";
 
-function AppContent() {
+function App() {
   const { isDark, themeName, toggleTheme } = useDarkMode();
   const dispatch = useDispatch();
-  
+
   const hotelsState = useSelector((state) => state.hotels);
-  const filteredHotels = useSelector(selectFilteredHotels);
-  const { filters, sortOrder, status } = hotelsState;
-  const bookings = useSelector((state) => state.bookings.bookings);
-  
-  // 🔥 VIEW MODE STATE
+  const { hotels, status } = hotelsState;
+
+  // Local filter and sort states
+  const [filters, setFilters] = useState({
+    city: '',
+    name: '',
+    price: '',
+  });
+  const [sortOrder, setSortOrder] = useState('rating-desc');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
-  
+
   useEffect(() => {
     if (status === 'idle') {
       dispatch(fetchHotels());
     }
   }, [status, dispatch]);
 
+  // Derived filtered and sorted hotels list
+  const filteredHotels = useMemo(() => {
+    let filtered = [...hotels];
+
+    if (filters.city) {
+      filtered = filtered.filter(hotel =>
+        hotel.city.toLowerCase().includes(filters.city.toLowerCase())
+      );
+    }
+    if (filters.name) {
+      filtered = filtered.filter(hotel =>
+        hotel.name.toLowerCase().includes(filters.name.toLowerCase())
+      );
+    }
+    if (filters.price) {
+      filtered = filtered.filter(hotel => hotel.price <= parseInt(filters.price, 10));
+    }
+
+    filtered.sort((a, b) => {
+      const ratingA = parseFloat(a.rating) || 0;
+      const ratingB = parseFloat(b.rating) || 0;
+      const priceA = a.price || 0;
+      const priceB = b.price || 0;
+      const nameA = (a.name || '').toLowerCase();
+      const nameB = (b.name || '').toLowerCase();
+
+      switch (sortOrder) {
+        case 'rating-asc': return ratingA - ratingB;
+        case 'rating-desc': return ratingB - ratingA;
+        case 'price-asc': return priceA - priceB;
+        case 'price-desc': return priceB - priceA;
+        case 'name-asc': return nameA.localeCompare(nameB);
+        case 'name-desc': return nameB.localeCompare(nameA);
+        default: return ratingB - ratingA;
+      }
+    });
+
+    return filtered;
+  }, [hotels, filters, sortOrder]);
+
+  // Clear all filters and sorting
   const handleClearFilters = () => {
-    dispatch(clearFilters());
+    setFilters({ city: '', name: '', price: '' });
+    setSortOrder('rating-desc');
   };
 
-  const allCities = hotelsState.hotels 
-    ? Array.from(new Set(hotelsState.hotels.map(hotel => hotel.city))).slice(0, 10)
-    : [];
-
-  const handleCityFilter = (city) => {
-    dispatch(setFilterCity(city));
-  };
-
-  // 🔥 VIEW TOGGLE HANDLER
-  const toggleViewMode = () => {
-    setViewMode(viewMode === 'cards' ? 'table' : 'cards');
-  };
+  // Prepare distinct cities for filter buttons (limit 10)
+  const allCities = hotels ? Array.from(new Set(hotels.map(hotel => hotel.city))).slice(0, 10) : [];
 
   return (
     <Router>
       <div className={`min-h-screen transition-all duration-300 ${
-        isDark 
-          ? 'bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white' 
+        isDark
+          ? 'bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white'
           : 'bg-gradient-to-b from-orange-50 via-white to-slate-50 text-gray-900'
       }`}>
         <Navbar theme={themeName} toggleTheme={toggleTheme} />
-        
+
         <Routes>
           <Route
             path="/"
@@ -71,7 +106,7 @@ function AppContent() {
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-2 h-6 bg-gradient-to-b rounded-sm" 
+                          <div className="w-2 h-6 bg-gradient-to-b rounded-sm"
                                style={isDark ? {background: 'linear-gradient(to bottom, #fbbf24, #f59e0b)'} : {}} />
                           <span className={`text-sm font-semibold tracking-wide uppercase ${
                             isDark ? 'text-amber-400' : 'text-orange-600'
@@ -93,11 +128,11 @@ function AppContent() {
                     </div>
                   </div>
 
-                  {/* 🔥 REAL DATA CITY BUTTONS */}
+                  {/* City buttons */}
                   {allCities.length > 0 && (
                     <div className={`mb-6 p-4 rounded-3xl shadow-xl transition-all duration-300 ${
-                      isDark 
-                        ? 'bg-slate-800/50 border border-slate-700' 
+                      isDark
+                        ? 'bg-slate-800/50 border border-slate-700'
                         : 'bg-white/80 border border-orange-100 shadow-lg'
                     }`}>
                       <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${
@@ -106,14 +141,14 @@ function AppContent() {
                         📍 Available Cities
                       </h3>
                       <div className="flex flex-wrap gap-2">
-                        {allCities.map((city) => (
+                        {allCities.map(city => (
                           <button
                             key={city}
-                            onClick={() => handleCityFilter(city)}
+                            onClick={() => setFilters(prev => ({ ...prev, city }))}
                             className={`px-4 py-2.5 rounded-2xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 border flex items-center gap-2 ${
                               filters.city === city
-                                ? (isDark 
-                                    ? 'bg-amber-500/90 text-white border-amber-400 shadow-amber-500/25' 
+                                ? (isDark
+                                    ? 'bg-amber-500/90 text-white border-amber-400 shadow-amber-500/25'
                                     : 'bg-orange-500 text-white border-orange-400 shadow-orange-200'
                                   )
                                 : (isDark
@@ -129,7 +164,7 @@ function AppContent() {
                     </div>
                   )}
 
-                  {/* Search Bar */}
+                  {/* Filters UI */}
                   <div className={`shadow-lg border rounded-2xl mb-6 overflow-hidden transition-all duration-300 ${
                     isDark ? 'bg-slate-800/50 border-slate-600 shadow-black/20' : 'bg-white border-gray-100 shadow-lg'
                   }`}>
@@ -144,7 +179,6 @@ function AppContent() {
                       </div>
                     </div>
 
-                    {/* Filters */}
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 p-4">
                       <div className="relative">
                         <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm transition-all duration-300 ${
@@ -156,10 +190,10 @@ function AppContent() {
                           type="text"
                           placeholder="Hotel name"
                           value={filters.name}
-                          onChange={(e) => dispatch(setFilterName(e.target.value))}
+                          onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
                           className={`w-full pl-12 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:border-orange-400 transition-all duration-200 ${
-                            isDark 
-                              ? 'bg-slate-700/50 border-slate-500 text-white placeholder-slate-400 hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400' 
+                            isDark
+                              ? 'bg-slate-700/50 border-slate-500 text-white placeholder-slate-400 hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400'
                               : 'border-gray-200 bg-gray-50 hover:bg-white focus:ring-orange-400 focus:border-orange-400'
                           }`}
                         />
@@ -175,10 +209,10 @@ function AppContent() {
                           type="text"
                           placeholder="City or area"
                           value={filters.city}
-                          onChange={(e) => dispatch(setFilterCity(e.target.value))}
+                          onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
                           className={`w-full pl-12 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:border-orange-400 transition-all duration-200 ${
-                            isDark 
-                              ? 'bg-slate-700/50 border-slate-500 text-white placeholder-slate-400 hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400' 
+                            isDark
+                              ? 'bg-slate-700/50 border-slate-500 text-white placeholder-slate-400 hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400'
                               : 'border-gray-200 bg-gray-50 hover:bg-white focus:ring-orange-400 focus:border-orange-400'
                           }`}
                         />
@@ -194,10 +228,10 @@ function AppContent() {
                           type="number"
                           placeholder="5000"
                           value={filters.price}
-                          onChange={(e) => dispatch(setFilterPrice(e.target.value))}
+                          onChange={(e) => setFilters(prev => ({ ...prev, price: e.target.value }))}
                           className={`w-full pl-12 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:border-orange-400 transition-all duration-200 ${
-                            isDark 
-                              ? 'bg-slate-700/50 border-slate-500 text-white placeholder-slate-400 hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400' 
+                            isDark
+                              ? 'bg-slate-700/50 border-slate-500 text-white placeholder-slate-400 hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400'
                               : 'border-gray-200 bg-gray-50 hover:bg-white focus:ring-orange-400 focus:border-orange-400'
                           }`}
                         />
@@ -206,10 +240,10 @@ function AppContent() {
                       <div className="relative">
                         <select
                           value={sortOrder}
-                          onChange={(e) => dispatch(setSortOrder(e.target.value))}
+                          onChange={(e) => setSortOrder(e.target.value)}
                           className={`w-full pl-4 pr-8 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:border-orange-400 transition-all duration-200 appearance-none cursor-pointer ${
-                            isDark 
-                              ? 'bg-slate-700/50 border-slate-500 text-white hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400' 
+                            isDark
+                              ? 'bg-slate-700/50 border-slate-500 text-white hover:bg-slate-700 focus:ring-amber-400 focus:border-amber-400'
                               : 'border-gray-200 bg-gray-50 hover:bg-white focus:ring-orange-400 focus:border-orange-400'
                           }`}
                         >
@@ -232,8 +266,8 @@ function AppContent() {
                       <button
                         onClick={handleClearFilters}
                         className={`flex-1 py-3 px-4 text-sm font-medium rounded-xl transition-all duration-200 border ${
-                          isDark 
-                            ? 'bg-slate-700/50 hover:bg-slate-600 text-slate-200 border-slate-500 hover:border-slate-400' 
+                          isDark
+                            ? 'bg-slate-700/50 hover:bg-slate-600 text-slate-200 border-slate-500 hover:border-slate-400'
                             : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
                         }`}
                       >
@@ -242,7 +276,7 @@ function AppContent() {
                     </div>
                   </div>
 
-                  {/* 🔥 VIEW TOGGLE BUTTONS */}
+                  {/* View toggle */}
                   <div className={`mb-6 p-4 rounded-2xl shadow-lg transition-all duration-300 ${
                     isDark ? 'bg-slate-800/50 border border-slate-700' : 'bg-white/80 border border-orange-100'
                   }`}>
@@ -257,9 +291,9 @@ function AppContent() {
                           onClick={() => setViewMode('cards')}
                           className={`px-4 py-2.5 rounded-xl font-semibold text-sm shadow-lg transition-all duration-300 flex items-center gap-1 ${
                             viewMode === 'cards'
-                              ? 'bg-orange-500 text-white shadow-orange-300 hover:shadow-orange-400' 
-                              : (isDark 
-                                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600' 
+                              ? 'bg-orange-500 text-white shadow-orange-300 hover:shadow-orange-400'
+                              : (isDark
+                                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600'
                                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
                                 )
                           }`}
@@ -270,9 +304,9 @@ function AppContent() {
                           onClick={() => setViewMode('table')}
                           className={`px-4 py-2.5 rounded-xl font-semibold text-sm shadow-lg transition-all duration-300 flex items-center gap-1 ${
                             viewMode === 'table'
-                              ? 'bg-orange-500 text-white shadow-orange-300 hover:shadow-orange-400' 
-                              : (isDark 
-                                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600' 
+                              ? 'bg-orange-500 text-white shadow-orange-300 hover:shadow-orange-400'
+                              : (isDark
+                                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600'
                                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
                                 )
                           }`}
@@ -283,20 +317,19 @@ function AppContent() {
                     </div>
                   </div>
 
-                  
+                  {/* Display hotels */}
                   {status === 'loading' ? (
                     <div className="col-span-full flex items-center justify-center py-20">
                       <div className="text-lg">Loading hotels...</div>
                     </div>
                   ) : filteredHotels.length > 0 ? (
                     viewMode === 'cards' ? (
-                      //  CARDS VIEW
                       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {filteredHotels.map((hotel) => (
                           <div key={hotel._id} className="group">
                             <div className={`rounded-2xl shadow-sm hover:shadow-md border overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
-                              isDark 
-                                ? 'bg-slate-800/50 hover:shadow-slate-500/30 border-slate-600 hover:border-amber-400/50' 
+                              isDark
+                                ? 'bg-slate-800/50 hover:shadow-slate-500/30 border-slate-600 hover:border-amber-400/50'
                                 : 'bg-white hover:shadow-md border-gray-100 hover:border-orange-200'
                             }`}>
                               <HotelCard hotel={hotel} />
@@ -305,7 +338,7 @@ function AppContent() {
                         ))}
                       </div>
                     ) : (
-                     
+                      // Table view
                       <div className={`rounded-3xl shadow-2xl border overflow-hidden transition-all duration-300 ${
                         isDark ? 'bg-slate-800/50 border-slate-600' : 'bg-white border-gray-100'
                       }`}>
@@ -335,9 +368,7 @@ function AppContent() {
                                 }`}>
                                   Rating
                                 </th>
-                               
                               </tr>
-                              
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                               {filteredHotels.map((hotel) => (
@@ -346,8 +377,8 @@ function AppContent() {
                                 }`}>
                                   <td className="px-8 py-6">
                                     <div className="flex items-center gap-4">
-                                      <img 
-                                        src={hotel.image } 
+                                      <img
+                                        src={hotel.image}
                                         alt={hotel.name}
                                         className="w-16 h-16 rounded-2xl object-cover shadow-lg"
                                       />
@@ -380,18 +411,15 @@ function AppContent() {
                                   </td>
                                   <td className="px-8 py-6">
                                     <div className="flex items-center gap-1 text-yellow-400 text-lg font-semibold">
-                                      ⭐ {hotel.rating }
+                                      ⭐ {hotel.rating}
                                     </div>
-                                   
                                   </td>
-                                  
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         </div>
                       </div>
-                      
                     )
                   ) : (
                     <div className={`col-span-full flex flex-col items-center justify-center py-20 text-center rounded-2xl border-2 border-dashed transition-all duration-300 ${
@@ -421,6 +449,7 @@ function AppContent() {
                     </div>
                   )}
 
+                  {/* Footer Info */}
                   {filteredHotels.length > 0 && (
                     <div className={`mt-8 pt-6 border-t text-center transition-all duration-300 ${
                       isDark ? 'border-slate-600' : 'border-gray-200'
@@ -451,15 +480,6 @@ function AppContent() {
         <ChatBot />
       </div>
     </Router>
-    
-  );
-}
-
-function App() {
-  return (
-    <Provider store={store}>
-      <AppContent />
-    </Provider>
   );
 }
 

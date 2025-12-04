@@ -10,8 +10,6 @@ const BookingForm = ({ hotel, onClose }) => {
     guestName: "",
     email: "",
     phone: "",
-    checkIn: "",
-    checkOut: "",
     rooms: 1,
     adults: 2,
     children: 0,
@@ -29,8 +27,6 @@ const BookingForm = ({ hotel, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Show confirmation summary on submit
     setShowSummary(true);
   };
 
@@ -47,7 +43,6 @@ const BookingForm = ({ hotel, onClose }) => {
       hotelImage: hotel.image || hotel.images?.[0],
       city: hotel.city,
       price: hotel.price,
-      date: formData.checkIn,
       guestName: formData.guestName,
       ...formData,
     };
@@ -64,7 +59,7 @@ const BookingForm = ({ hotel, onClose }) => {
     setLoading(false);
   };
 
-  // Summary Box with user details before final confirmation
+  // Summary Box
   if (showSummary) {
     return (
       <div className="p-6 space-y-6 max-w-md mx-auto">
@@ -115,20 +110,12 @@ const BookingForm = ({ hotel, onClose }) => {
           </div>
         </div>
 
-        {/* Stay Details */}
+        {/* Stay Details (NO check-in/out) */}
         <div className="bg-white p-6 rounded-3xl border-2 border-gray-200 shadow-lg mb-6">
           <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            📅 Stay Details
+            📅 Booking Details
           </h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="font-medium text-gray-700 mb-1">Check-in</div>
-              <div className="font-bold text-gray-900">{formData.checkIn || "Not selected"}</div>
-            </div>
-            <div>
-              <div className="font-medium text-gray-700 mb-1">Check-out</div>
-              <div className="font-bold text-gray-900">{formData.checkOut || "Not selected"}</div>
-            </div>
             <div>
               <div className="font-medium text-gray-700 mb-1">Rooms</div>
               <div className="font-bold text-gray-900">{formData.rooms}</div>
@@ -255,33 +242,9 @@ const BookingForm = ({ hotel, onClose }) => {
         </div>
       </div>
 
-      {/* Stay Details */}
+      {/* Booking Details (NO check-in/out) */}
       <div className="space-y-4">
-        <h4 className="text-lg font-bold text-gray-900">Stay Details</h4>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Check-in</label>
-            <input
-              type="date"
-              name="checkIn"
-              value={formData.checkIn}
-              onChange={handleChange}
-              required
-              className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Check-out</label>
-            <input
-              type="date"
-              name="checkOut"
-              value={formData.checkOut}
-              onChange={handleChange}
-              required
-              className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
+        <h4 className="text-lg font-bold text-gray-900">Booking Details</h4>
         <div className="grid md:grid-cols-3 gap-4 pt-4">
           <select
             name="rooms"
